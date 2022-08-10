@@ -1,8 +1,10 @@
-classdef NNmodel 
+classdef NNmodel < handle
     properties
         LayerGraph
         Connection
         GradFcn
+        X
+        Y
     end
 
     methods
@@ -12,8 +14,9 @@ classdef NNmodel
             if size(x,2)~= self.LayerGraph(1).neuronNum
                 error('Data size not match with input layer')
             end
-            initialGain = 1/sqrt(numel(x));
-            input =x;
+            self.X = x;
+            initialGain = 1/sqrt(numel(self.X));
+            input = self.X;
             for i = 1:length(self.LayerGraph)
                 if i <length(self.LayerGraph)
                     self.LayerGraph(i).W = self.LayerGraph(i).W*initialGain;
@@ -22,7 +25,6 @@ classdef NNmodel
                 input = output;
             end
             y = output;
-
         end
 
     end
