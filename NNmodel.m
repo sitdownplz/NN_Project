@@ -1,30 +1,52 @@
 classdef NNmodel < handle
+    % Neural network object, contains whole network information
     properties
         LayerGraph
         Connection
         GradFcn
-        X
-        Y
+        X    % Predictor
+        Y    % Response
+        YPred    % Current predict result
+        grad_W    % Current weight gradient of each layer 
+        grad_b    % Current bias gradient of each layer
     end
 
     methods
         function self = NNmodel
         end
-        function y = eval(self, x)
+
+        % Evaluate network with predictor an d response
+        function y = eval(self, x, y)
             if size(x,2)~= self.LayerGraph(1).neuronNum
                 error('Data size not match with input layer')
             end
-            self.X = x;
-            initialGain = 1/sqrt(numel(self.X));
+            self.X = x';
+            self.Y = y;
+            initialGain = 1/sqrt(100);
             input = self.X;
             for i = 1:length(self.LayerGraph)
-                if i <length(self.LayerGraph)
-                    self.LayerGraph(i).W = self.LayerGraph(i).W*initialGain;
-                end
                 output = forward(self.LayerGraph(i),input);
+                % Batch normalization 
+                if i < 4    %TODO
+                  output = normalize(output);
+                end
                 input = output;
             end
             y = output;
+            self.YPred = y;
+        end
+
+        % Back Propagation for Roy's GD
+        % Manual passing hidden state value between layer
+        function y = backward(self, x, layer)
+            X_temp = x;
+            if layer < length(self.LayerGraph)
+                for i = layer+1:length(self.LayerGraph)
+                    output = forward(self.LayerGraph(i), X_temp, 'X_temp');
+                    X_temp = output;
+                end
+            end
+            y = X_temp;
         end
 
     end
