@@ -4,9 +4,10 @@
 % process
 clear,clc
 close all
+
 %% Create Dummy Data
 % Create demostrate dummy data for training
-n = 10;
+n = 20;
 x=linspace(-1,1,n); y=x;
 [X,Y] = meshgrid(x,y);
 V = X.^2+Y.^2;
@@ -20,29 +21,39 @@ response = V(:);
 % rng(1)    % Fixed random seed
 
 % Create model layer
-inputlayer = NNLayer(2, 3);
+inputlayer = NNLayer(2, 4);
 h1 = NNLayer(3, 4);
 h2 = NNLayer(4, 4);
 h3 = NNLayer(4, 3);
 outputlayer = NNLayer(3,1);
+% outputlayer.actFcn = @tanh;
 
 % Combine layer into model
-lgraph = [inputlayer,h1,h2,h3,outputlayer];
+% lgraph = [inputlayer,h1,h2,h3,outputlayer];
+lgraph = [inputlayer,h3,outputlayer];
 mdl = combineNNLayer(lgraph);
 
 % Create optimizer object
 optim = optimizer(mdl);
+optim.batch_size = 10;
 
 Elapsed_time = 0;
 figure
 h = animatedline;
 
+data_length = length(predictor);
 % Start training
-for iter = 1:300    % Iteration
+for iter = 1:500    % Iteration
     total_Loss = [];
-    for i  = 1:randperm(100)    % Epoch
+    data_index = randperm(data_length);
+    if mod(iter,100)==0
+        optim.lr = optim.lr*0.3;
+        optim.m = optim.m*0.8;
+    end
+    for i  = 1:data_length    % Epoch
         tic
-        out = mdl.eval(predictor(i,:), response(i));
+        idx = data_index(i);
+        out = mdl.eval(predictor(idx,:), response(idx));
         optim.step(iter)
         epoch_time = toc;
         Elapsed_time = Elapsed_time + epoch_time;
@@ -52,6 +63,7 @@ for iter = 1:300    % Iteration
         Elapsed_time, mean(total_Loss)),optim.BestLoss)
     addpoints(h,iter,mean(total_Loss))
     drawnow
+
 end
 
 % Evaluate trained model
