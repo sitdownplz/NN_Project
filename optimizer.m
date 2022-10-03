@@ -2,12 +2,14 @@ classdef optimizer <handle
     % Optimizer object required NNmodel for input
     properties
         NNmodel    % NNmodel object
-        lr mustBeNumeric =1e-3    % Learning Rate
-        m mustBeNumeric =0.8    % Momentum
+        lr {mustBeNumeric} =1e-3    % Learning Rate
+        m {mustBeNumeric} =0.9    % Momentum
         GradFcn = @Roy_GD
-        Loss    mustBeNumeric
+        Loss {mustBeNumeric}
         BestLoss = inf
-        current_iter = 0    % Current iteration
+        batch_size
+        current_iter = 1    % Current iteration
+        count = 1 % Current epoch
         grad_W    % Current cumulative weight gradient of each layer
         grad_b    % Current cumulative bias gradient of each layer
 
@@ -23,56 +25,63 @@ classdef optimizer <handle
                     self.grad_b = cell(1, length(self.NNmodel.LayerGraph));
             end
         end
-        
-        % Calculate gradient and update model 
+
+        % Calculate gradient and update model
         function step(self, init)
             % step(self, current iteration)
             if init ~= self.current_iter
                 self.grad_W = cell(1, length(self.NNmodel.LayerGraph));
                 self.grad_b = cell(1, length(self.NNmodel.LayerGraph));
             end
+
             self.Loss = CostFunc.SSELoss(self.NNmodel.Y, self.NNmodel.YPred);
-            if self.Loss < self.BestLoss | randi([0,1],1) %TODO
+            if self.Loss < self.BestLoss | true %TODO
                 for layer = 1:length(self.NNmodel.LayerGraph)
                     [d_W, d_b ]= self.Roy_GD(layer);
-                    error = self.NNmodel.Y - self.NNmodel.YPred; 
-                    gradient_W = -d_W*error;
+                    error = self.NNmodel.Y - self.NNmodel.YPred;
+                    gradient_W = -d_W*error; %D_C
                     gradient_b = -d_b*error;
 
-                    if init==1
-                        step_W=-self.lr*gradient_W;
-                        step_b=-self.lr*gradient_b;
-                    else
-                        step_W= self.m*self.NNmodel.grad_W{layer}-self.lr*gradient_W;
-                        step_b= self.m*self.NNmodel.grad_b{layer}-self.lr*gradient_b;
-                    end
-
-                    if isempty(self.grad_W{layer}) & isempty(self.grad_b{layer})
+                    if isempty(self.grad_W{layer}) && isempty(self.grad_b{layer})
                         self.grad_W{layer} = gradient_W;
                         self.grad_b{layer} = gradient_b;
                     else
                         self.grad_W{layer} = self.grad_W{layer}+gradient_W;
                         self.grad_b{layer} = self.grad_b{layer}+gradient_b;
                     end
+              
+                    if init==1
+                        step_W=-self.lr*gradient_W;
+                        step_b=-self.lr*gradient_b;
+                    elseif  self.count == self.batch_size || init ~= self.current_iter
+                        step_W= self.lr*(self.m*self.NNmodel.grad_W{layer}+self.grad_W{layer});
+                        step_b= self.lr*(self.m*self.NNmodel.grad_b{layer}+self.grad_b{layer});
+                    end
 
-                    if init ~= self.current_iter
+                    if  self.count == self.batch_size || init ~= self.current_iter
                         self.NNmodel.LayerGraph(layer).W  = self.NNmodel.LayerGraph(layer).W-step_W;
                         if layer <length(self.NNmodel.LayerGraph)
                             self.NNmodel.LayerGraph(layer).b  = self.NNmodel.LayerGraph(layer).b-step_b;
                         end
-                        self.current_iter = init;
                     end
                 end
+
                 self.NNmodel.grad_W = self.grad_W;
                 self.NNmodel.grad_b = self.grad_b;
                 self.BestLoss = self.Loss;
+                if self.count == self.batch_size || init ~= self.current_iter
+                    self.count = 1;
+                    self.current_iter = init;
+                else
+                    self.count = self.count+1;
+                end
             end
         end
 
 
         % Roy's gradient decent methods
         function [d_W, d_b]= Roy_GD(self, layer)
-            seg = 51;
+            seg = 8;
             pts = 1:seg;
             r = 1e-3;
             i=complex(0,1);
@@ -80,10 +89,10 @@ classdef optimizer <handle
             Layer = self.NNmodel.LayerGraph(layer);
             X = Layer.X;
             h = Layer.h;
-            X = repelem(X,numel(h));
+            X = repelem(X, size(h,1), 1);
 
-            y_hat_W = X*beta + repmat(h, Layer.neuronNum,1);
-            y_hat_b =h-beta;
+            y_hat_W = X.*beta + repmat(h, Layer.neuronNum,1);
+            y_hat_b =h+beta;
             d_W = combCal(y_hat_W, 'weight');
             d_b = combCal(y_hat_b, 'bias');
 
@@ -111,7 +120,7 @@ classdef optimizer <handle
                     end
 
                     new = self.NNmodel.backward(comb, layer);
-                    new = reshape(new, seg, [])';
+                    new = reshape(new, seg, []).';
                 end
 
                 fv =  new./beta;
