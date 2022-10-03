@@ -27,13 +27,12 @@ classdef NNmodel < handle
             for i = 1:length(self.LayerGraph)
                 output = forward(self.LayerGraph(i),input);
                 % Batch normalization 
-                if i < 4    %TODO
-                  output = normalize(output);
-                end
+                   %TODO
+
                 input = output;
             end
             y = output;
-            self.YPred = y;
+            self.YPred = y(:);
         end
 
         % Back Propagation for Roy's GD
