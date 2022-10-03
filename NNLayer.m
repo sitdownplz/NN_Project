@@ -51,6 +51,7 @@ classdef NNLayer < handle
             else
                 switch inputname(2)
                     case 'X_temp'   % Manul input X data
+                        
                         y = self.actFcn(self.W * x + self.b);
                     case 'W_temp'   % Manul input weight data
                         y = self.actFcn(x * self.X + self.b);
