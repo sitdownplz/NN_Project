@@ -50,13 +50,12 @@ classdef NNLayer < handle
                 self.h = self.W * self.X + self.b;
             else
                 switch inputname(2)
-                    case 'X_temp'   % Manul input X data
-                        
+                    case 'X_temp'   % Manual input X data
                         y = self.actFcn(self.W * x + self.b);
-                    case 'W_temp'   % Manul input weight data
+                    case 'W_temp'   % Manual input weight data
                         y = self.actFcn(x * self.X + self.b);
                         self.h = self.W * self.X + self.b;
-                    case 'b_temp'   % Manul input bias data
+                    case 'b_temp'   % Manual input bias data
                         y = self.actFcn(self.W * self.X + x);
                         self.h = self.W * self.X + self.b;
                 end
